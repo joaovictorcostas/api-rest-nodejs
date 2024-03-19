@@ -1,38 +1,55 @@
 import { FastifyInstance } from 'fastify'
 import { knex } from '../database'
 import { z } from 'zod'
+import { checkSessionId } from '../middlewares/check-session-id'
 
 export async function transactionsRoutes(app: FastifyInstance) {
-  app.get('/', async (request, reply) => {
-    const transactions = await knex('transactions').select('*')
+  app.get('/', { preHandler: [checkSessionId] }, async (request, reply) => {
+    const { sessionId } = request.cookies
+
+    const transactions = await knex('transactions')
+      .where('session_id', sessionId)
+      .select()
 
     return reply.status(200).send({ transactions })
   })
 
-  app.get('/:id', async (request, reply) => {
+  app.get('/:id', { preHandler: [checkSessionId] }, async (request, reply) => {
     const getTransactionParamsSchema = z.object({
       id: z.string().uuid(),
     })
 
     const { id } = getTransactionParamsSchema.parse(request.params)
 
+    const { sessionId } = request.cookies
+
     const transaction = await knex('transactions')
       .select('*')
-      .where('id', id)
+      .where({
+        session_id: sessionId,
+        id,
+      })
       .first()
 
     return reply.status(200).send({ transaction })
   })
 
-  app.get('/summary', async (request, reply) => {
-    const summary = await knex('transactions')
-      .sum('amount', { as: 'amount' })
-      .first()
+  app.get(
+    '/summary',
+    { preHandler: [checkSessionId] },
+    async (request, reply) => {
+      const { sessionId } = request.cookies
 
-    return reply.status(200).send({ summary })
-  })
+      const summary = await knex('transactions')
+        .where('session_id', sessionId)
+        .sum('amount', { as: 'amount' })
+        .first()
 
-  app.post('/', async (request, reply) => {
+      return reply.status(200).send({ summary })
+    },
+  )
+
+  app.post('/', { preHandler: [checkSessionId] }, async (request, reply) => {
     const createTransactionBodySchema = z.object({
       title: z.string(),
       amount: z.number(),
@@ -48,7 +65,7 @@ export async function transactionsRoutes(app: FastifyInstance) {
     if (!sessionId) {
       sessionId = crypto.randomUUID()
 
-      reply.cookie('sessionId', sessionId, {
+      reply.setCookie('sessionId', sessionId, {
         path: '/',
         maxAge: 60 * 60 * 24 * 7, // 7 days
       })
