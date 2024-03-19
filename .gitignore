@@ -1,3 +1,4 @@
 node_modules
 tmp/app.sqlite
 db/app.sqlite
+*.http
