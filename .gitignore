@@ -4,3 +4,4 @@ db/*.sqlite
 *.http
 .env
 .env.test
+build
