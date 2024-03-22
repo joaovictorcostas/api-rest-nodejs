@@ -3,3 +3,4 @@ tmp/app.sqlite
 db/app.sqlite
 *.http
 .env
+.env.test
