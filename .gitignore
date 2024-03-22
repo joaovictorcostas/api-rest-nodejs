@@ -1,6 +1,6 @@
 node_modules
 tmp/app.sqlite
-db/app.sqlite
+db/*.sqlite
 *.http
 .env
 .env.test
